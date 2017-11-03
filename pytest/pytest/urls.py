@@ -18,5 +18,5 @@ from django.contrib import admin
 
 urlpatterns = [
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^freshfruit',include('freshfruit.urls')),
+    url(r'^user/',include('df_user.urls')),
 ]
