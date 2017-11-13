@@ -1,8 +1,10 @@
 # coding=utf-8
 from django.shortcuts import render,redirect
-from models import *
+from models import UserInfo
+from df_goods.models import GoodsInfo
 from hashlib import sha1
 from django.http import JsonResponse,HttpResponseRedirect
+from . import user_decorator
 # Create your views here.
 
 def register(request):
@@ -18,6 +20,10 @@ def register_handle(request):
     upwd2 = post.get('cpwd')
     uemail = post.get('email')
     #判断两次密码是否一致
+    # uname = request.GET.get('uname')
+    # count = UserInfo.objects.filter(uname=uname).count()
+    # if count >= 1:
+
     if upwd != upwd2:
         return redirect('/user/register/')
     #加密
@@ -44,6 +50,10 @@ def login(request):
     uname = request.COOKIES.get('uname','')
     context = {'title':'用户登录','error_name':0,'error_pwd':0,'uname':uname}
     return render(request,'df_user/login.html',context)
+
+def logout(request):
+    request.session.flush()
+    return redirect('/goods/')
 
 def login_handle(request):
     #接收请求信息
@@ -74,26 +84,48 @@ def login_handle(request):
         context = {'title':'用户登录','error_name':1,'error_pwd':0,'uname':uname,'upwd':upwd}
         return render(request,'df_user/login.html',context)
 
-
+@user_decorator.login
 def info(request):
     user_email = UserInfo.objects.get(id=request.session['user_id']).uemail
+    try:
+
+        goods_ids = request.COOKIES.get('goods_ids','')
+        # print('******',goods_ids)
+        goods_ids1 = goods_ids.split(',')
+        #GoodsInfo.objects.filter(id__in=goods_ids1)
+        #这个查询方法不会按照你浏览的先后顺序显示商品
+        goods_list = []
+        for goods_id in goods_ids1:
+            goods_list.append(GoodsInfo.objects.get(id=int(goods_id)))
+    except Exception as e:
+        print(e)
+    # print('-------',goods_list)
+    # for g in goods_list:
+    #     print(g.id)
+
     context = {'title':'用户中心',
                'user_email':user_email,
-               'user_name':request.session['user_name']}
+               'user_name':request.session['user_name'],
+               'page_name':'1',
+               'goods_list':goods_list
+               }
     return render(request,'df_user/user_center_info.html',context)
 
+@user_decorator.login
 def order(request):
-    context = {'title':'用户中心'}
+    context = {'title':'用户中心','page_name':1}
     return render(request,'df_user/user_center_order.html',context)
 
+@user_decorator.login
 def site(request):
     user = UserInfo.objects.get(id=request.session['user_id'])
     if request.method == 'POST':
         post = request.POST
         user.ushou = post.get('ushou')
-        user.uaddress = post.get('uadress')
+        user.uaddress = post.get('uaddress')
         user.uyoubian = post.get('uyoubian')
         user.uphone = post.get('uphone')
         user.save()
-    context = {'title':'用户中心','user':user}
+    context = {'title':'用户中心','user':user,
+               'page_name':1}
     return render(request,'df_user/user_center_site.html',context)
